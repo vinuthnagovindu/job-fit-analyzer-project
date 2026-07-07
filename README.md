@@ -133,4 +133,3 @@ This project uses **Groq's free API** — no credit card required.
 2. Sign up and generate an API key
 3. Paste it into the UI — it is never stored or sent anywhere except directly to Groq
 
----
