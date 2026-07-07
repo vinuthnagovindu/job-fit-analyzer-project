@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Fit Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0D1117;
+    --surface: #161B27;
+    --surface2: #1E2638;
+    --border: #2A3244;
+    --border2: #3A4560;
+    --accent: #06B6D4;
+    --accent2: #22D3EE;
+    --accent-glow: rgba(6,182,212,0.12);
+    --green: #2DD4BF;
+    --green-bg: rgba(45,212,191,0.10);
+    --amber: #FBBF24;
+    --amber-bg: rgba(251,191,36,0.10);
+    --red: #FB7185;
+    --red-bg: rgba(251,113,133,0.10);
+    --text: #F0F6FF;
+    --text2: #8B9FC0;
+    --text3: #4A5878;
+    --font: 'Inter', sans-serif;
+    --mono: 'DM Mono', monospace;
+    --radius: 12px;
+    --radius-sm: 8px;
+}
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    background-image:
+        linear-gradient(rgba(91,79,212,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,79,212,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+}
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 3rem 2rem 6rem;
+  }
+
+  .header {
+    margin-bottom: 3rem;
+    animation: fadeUp 0.6s ease both;
+  }
+  h1 {
+    font-family: 'Inter', sans-serif;
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    font-weight: 600;
+    font-style: italic;
+    letter-spacing: -0.01em;
+    line-height: 1.05;
+}
+  h1 span { color: var(--accent2); }
+  .header-sub {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 0.75rem;
+  }
+
+  .step-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+  }
+  .step-num {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    flex-shrink: 0;
+    transition: all 0.3s;
+  }
+  .step-num.active { border-color: var(--accent); color: var(--accent2); background: var(--accent-glow); }
+  .step-num.done { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+  .step-title { font-size: 13px; font-weight: 600; color: var(--text2); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    animation: fadeUp 0.5s ease both;
+  }
+  .card:hover { border-color: var(--border2); }
+
+  .key-row {
+    display: flex;
+    gap: .75rem;
+    align-items: center;
+  }
+  .key-input-wrap {
+    flex: 1;
+    position: relative;
+  }
+  .key-input-wrap input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .65rem 2.5rem .65rem 1rem;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .key-input-wrap input:focus { border-color: var(--accent); }
+  .key-input-wrap input::placeholder { color: var(--text3); }
+  .key-toggle {
+    position: absolute;
+    right: 10px; top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: var(--text3);
+    font-size: 14px;
+    user-select: none;
+    transition: color 0.2s;
+  }
+  .key-toggle:hover { color: var(--text2); }
+  .key-status {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    transition: all 0.3s;
+  }
+  .key-status.empty { color: var(--text3); border: 1px solid var(--border); }
+  .key-status.set { color: var(--green); border: 1px solid rgba(34,201,122,0.3); background: var(--green-bg); }
+  .key-hint {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: .5rem;
+  }
+  .key-hint a { color: var(--accent2); text-decoration: none; }
+  .key-hint a:hover { text-decoration: underline; }
+
+  .mode-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.25rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    width: fit-content;
+  }
+  .mode-tab {
+    padding: .45rem 1rem;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text3);
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.04em;
+  }
+  .mode-tab.active { background: var(--accent); color: white; }
+  .mode-tab:hover:not(.active) { color: var(--text2); background: var(--surface2); }
+
+  textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    resize: vertical;
+    min-height: 220px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--text3); }
+
+  .upload-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 2.5rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: none;
+  }
+  .upload-zone.visible { display: block; }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: var(--accent-glow); }
+  .upload-zone .uz-icon { font-size: 2rem; margin-bottom: .75rem; color: var(--text3); }
+  .upload-zone .uz-title { font-size: 14px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+  .upload-zone .uz-sub { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+  #file-input { display: none; }
+
+  .file-pill {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: .65rem 1rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-top: .75rem;
+  }
+  .file-pill.visible { display: flex; }
+  .fp-icon { width: 32px; height: 32px; background: var(--accent-glow); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--accent2); font-size: 14px; flex-shrink: 0; }
+  .fp-name { font-size: 13px; font-weight: 600; flex: 1; }
+  .fp-size { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+  .fp-remove { cursor: pointer; color: var(--text3); font-size: 16px; transition: color 0.2s; }
+  .fp-remove:hover { color: var(--red); }
+
+  .resume-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: .5rem;
+  }
+  .char-count { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+  .char-count.good { color: var(--green); }
+
+  .co-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: .5rem;
+    margin-bottom: 1rem;
+  }
+  .co-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: .55rem .85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text2);
+    user-select: none;
+  }
+  .co-chip:hover { border-color: var(--border2); color: var(--text); }
+  .co-chip.on { border-color: var(--accent); background: var(--accent-glow); color: var(--accent2); }
+  .co-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .co-check { margin-left: auto; opacity: 0; color: var(--accent); font-size: 14px; transition: opacity 0.2s; }
+  .co-chip.on .co-check { opacity: 1; }
+  .co-add {
+    border-style: dashed;
+    color: var(--text3);
+    justify-content: center;
+    gap: 6px;
+  }
+  .co-add:hover { color: var(--accent2); border-color: var(--accent); }
+
+  .add-form {
+    display: none;
+    gap: .5rem;
+    margin-top: .5rem;
+  }
+  .add-form.visible { display: flex; }
+  .add-form input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: .5rem .75rem;
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    outline: none;
+  }
+  .add-form button {
+    padding: .5rem 1rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .add-form button:hover { background: var(--accent2); }
+
+  .run-section {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-top: 1.5rem;
+  }
+  .run-btn {
+    flex: 1;
+    padding: .85rem 1.5rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    letter-spacing: 0.02em;
+  }
+  .run-btn:hover:not(:disabled) { background: #8f82f7; transform: translateY(-1px); }
+  .run-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+  .run-btn.running { background: #2a2a3a; cursor: not-allowed; }
+  .run-stats {
+    display: flex;
+    gap: .75rem;
+  }
+  .stat-pill {
+    padding: .5rem .85rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    text-align: center;
+  }
+  .stat-val { font-size: 18px; font-weight: 700; color: var(--text); }
+  .stat-lbl { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 1px; }
+
+  .progress-section {
+    display: none;
+    margin-top: 1.5rem;
+    animation: fadeUp 0.4s ease both;
+  }
+  .progress-section.visible { display: block; }
+  .prog-bar-wrap {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .prog-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.5s ease;
+  }
+  .agent-log {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  
+  .log-line {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    animation: fadeUp 0.2s ease both;
+  }
+  .log-line:last-child { border: none; }
+  .log-agent { color: var(--accent2); white-space: nowrap; }
+  .log-msg { color: var(--text2); }
+
+  .results-section {
+    display: none;
+    margin-top: 1.5rem;
+    animation: fadeUp 0.5s ease both;
+  }
+  .results-section.visible { display: block; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .75rem;
+    margin-bottom: 1.25rem;
+  }
+  .summary-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    text-align: center;
+  }
+  .summary-val { font-size: 28px; font-weight: 700; color: var(--text); }
+  .summary-lbl { font-family: var(--mono); font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: .75rem;
+    animation: fadeUp 0.4s ease both;
+    transition: border-color 0.2s;
+  }
+  .result-card:hover { border-color: var(--border2); }
+  .result-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: .85rem;
+  }
+  .result-co { font-size: 16px; font-weight: 700; }
+  .result-score-wrap { display: flex; align-items: baseline; gap: 4px; }
+  .result-score { font-size: 28px; font-weight: 700; }
+  .result-score-of { font-size: 13px; color: var(--text3); font-family: var(--mono); }
+  .score-track {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: .85rem;
+  }
+  .score-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+
+  .pills-row { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .85rem; }
+  .pill {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-family: var(--mono);
+  }
+  .pill-ok { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,201,122,0.2); }
+  .pill-gap { background: var(--red-bg); color: var(--red); border: 1px solid rgba(245,80,110,0.2); }
+
+  .rec-badge {
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .rec-apply { background: var(--green-bg); color: var(--green); border: 1px solid rgba(34,201,122,0.3); }
+  .rec-upskill { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,166,35,0.3); }
+  .rec-skip { background: var(--red-bg); color: var(--red); border: 1px solid rgba(245,80,110,0.3); }
+
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: .6rem 1.25rem;
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: .75rem;
+  }
+  .download-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .spin { display: inline-block; animation: spin 1s linear infinite; }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+
+  <div class="header">
+    <h1>Job <span>Fit</span><br>Analyzer</h1>
+    <p class="header-sub">Paste Resume → Pick Companies → Get Scored</p>
+  </div>
+
+  <div class="step-label">
+    <div class="step-num active" id="sn0">🔑</div>
+    <span class="step-title">API Key</span>
+  </div>
+  <div class="card" style="animation-delay:0.1s">
+    <div class="key-row">
+      <div class="key-input-wrap">
+        <input type="password" id="api-key" placeholder="gsk_... enter your Groq API key" oninput="onKeyInput()">
+        <span class="key-toggle" onclick="toggleKeyVisibility()" id="key-eye">👁</span>
+      </div>
+      <span class="key-status empty" id="key-status">not set</span>
+    </div>
+    <p class="key-hint">💡 Don't have one? Create a free API key at <a href="https://console.groq.com" target="_blank">console.groq.com</a></p>
+  </div>
+
+  <div class="step-label" style="margin-top:1.5rem">
+    <div class="step-num" id="sn1">📄</div>
+    <span class="step-title">Your Resume</span>
+  </div>
+  <div class="card" style="animation-delay:0.2s">
+    <div class="mode-tabs">
+      <div class="mode-tab active" onclick="switchMode('paste',this)">📋 Paste text</div>
+      <div class="mode-tab" onclick="switchMode('upload',this)">📁 Upload .txt</div>
+    </div>
+
+    <div id="paste-mode">
+      <textarea id="resume-textarea" placeholder="Paste your full resume here...&#10;&#10;Name&#10;Email | GitHub | LinkedIn&#10;&#10;SKILLS&#10;...&#10;&#10;PROJECTS&#10;...&#10;&#10;EXPERIENCE&#10;..." oninput="onResumeInput()"></textarea>
+      <div class="resume-meta">
+        <span class="char-count" id="char-count">0 characters</span>
+      </div>
+    </div>
+
+    <div id="upload-mode" style="display:none">
+      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div class="uz-icon">📄</div>
+        <p class="uz-title">Drop your resume here</p>
+        <p class="uz-sub">.txt files only · or click to browse</p>
+        <input type="file" id="file-input" accept=".txt" onchange="handleFile(this.files[0])">
+      </div>
+      <div class="file-pill" id="file-pill">
+        <div class="fp-icon">📄</div>
+        <span class="fp-name" id="fp-name">—</span>
+        <span class="fp-size" id="fp-size">—</span>
+        <span class="fp-remove" onclick="clearFile()">✕</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-label" style="margin-top:1.5rem">
+    <div class="step-num" id="sn2">🏢</div>
+    <span class="step-title">Target Companies</span>
+  </div>
+  <div class="card" style="animation-delay:0.3s">
+    <div class="co-grid" id="co-grid">
+      <div class="co-chip on" data-co="Google" onclick="toggleCo(this)">
+        <div class="co-dot" style="background:#4285F4"></div>
+        <span>Google</span><span class="co-check">✓</span>
+      </div>
+      <div class="co-chip on" data-co="Razorpay" onclick="toggleCo(this)">
+        <div class="co-dot" style="background:#2D8CFF"></div>
+        <span>Razorpay</span><span class="co-check">✓</span>
+      </div>
+      <div class="co-chip on" data-co="Zepto" onclick="toggleCo(this)">
+        <div class="co-dot" style="background:#E03E3E"></div>
+        <span>Zepto</span><span class="co-check">✓</span>
+      </div>
+      <div class="co-chip on" data-co="Microsoft" onclick="toggleCo(this)">
+        <div class="co-dot" style="background:#00A4EF"></div>
+        <span>Microsoft</span><span class="co-check">✓</span>
+      </div>
+      <div class="co-chip on" data-co="Amazon" onclick="toggleCo(this)">
+        <div class="co-dot" style="background:#2D8CFF"></div>
+        <span>Amazon</span><span class="co-check">✓</span>
+      </div>
+      <div class="co-chip co-add" onclick="toggleAddForm()">
+        <span>＋</span><span>Add company</span>
+      </div>
+    </div>
+    <div class="add-form" id="add-form">
+      <input type="text" id="co-input" placeholder="e.g. Flipkart" onkeydown="if(event.key==='Enter')addCompany()">
+      <button onclick="addCompany()">Add</button>
+    </div>
+  </div>
+
+  <div class="run-section">
+    <button class="run-btn" id="run-btn" onclick="runAnalysis()" disabled>
+      <span id="run-icon">▶</span>
+      <span id="run-label">Run Crew Analysis</span>
+    </button>
+    <div class="run-stats">
+      <div class="stat-pill">
+        <div class="stat-val" id="stat-co">5</div>
+        <div class="stat-lbl">companies</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-val" id="stat-resume">—</div>
+        <div class="stat-lbl">resume</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="progress-section" id="progress-section">
+    <div class="step-label" style="margin-bottom:.75rem">
+      <div class="step-num active">⟳</div>
+      <span class="step-title">Crew running</span>
+    </div>
+    <div class="prog-bar-wrap"><div class="prog-bar" id="prog-bar"></div></div>
+    <div class="agent-log" id="agent-log"></div>
+  </div>
+
+  <div class="results-section" id="results-section">
+    <div class="step-label" style="margin-bottom:1rem">
+      <div class="step-num done" id="sn3">✓</div>
+      <span class="step-title">Analysis Complete</span>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-val" id="sum-total">—</div>
+        <div class="summary-lbl">analyzed</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-val" id="sum-apply" style="color:var(--green)">—</div>
+        <div class="summary-lbl">apply now</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-val" id="sum-avg">—</div>
+        <div class="summary-lbl">avg score</div>
+      </div>
+    </div>
+
+    <div id="result-cards"></div>
+
+    <button class="download-btn" onclick="downloadReport()">
+      ⬇ Download report .txt
+    </button>
+  </div>
+
+</div>
+
+<script>
+let resumeText = '';
+let apiKey = '';
+let lastReport = '';
+function onKeyInput() {
+  apiKey = document.getElementById('api-key').value.trim();
+  const status = document.getElementById('key-status');
+  if (apiKey.length > 10) {
+    status.textContent = '✓ set';
+    status.className = 'key-status set';
+    document.getElementById('sn0').className = 'step-num done';
+    document.getElementById('sn0').textContent = '✓';
+  } else {
+    status.textContent = 'not set';
+    status.className = 'key-status empty';
+    document.getElementById('sn0').className = 'step-num active';
+    document.getElementById('sn0').textContent = '0';
+  }
+  updateRunBtn();
+}
+
+function toggleKeyVisibility() {
+  const input = document.getElementById('api-key');
+  const eye = document.getElementById('key-eye');
+  if (input.type === 'password') { input.type = 'text'; eye.textContent = '🙈'; }
+  else { input.type = 'password'; eye.textContent = '👁'; }
+}
+
+function switchMode(mode, el) {
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('paste-mode').style.display = mode === 'paste' ? 'block' : 'none';
+  document.getElementById('upload-mode').style.display = mode === 'upload' ? 'block' : 'none';
+  document.getElementById('drop-zone').classList.toggle('visible', mode === 'upload');
+  if (mode === 'upload') document.getElementById('drop-zone').classList.add('visible');
+}
+
+function onResumeInput() {
+  resumeText = document.getElementById('resume-textarea').value.trim();
+  const cc = document.getElementById('char-count');
+  cc.textContent = resumeText.length + ' characters';
+  cc.className = 'char-count' + (resumeText.length > 200 ? ' good' : '');
+  document.getElementById('stat-resume').textContent = resumeText.length > 50 ? '✓' : '—';
+  document.getElementById('sn1').className = resumeText.length > 50 ? 'step-num done' : 'step-num';
+  document.getElementById('sn1').textContent = resumeText.length > 50 ? '✓' : '1';
+  updateRunBtn();
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    resumeText = e.target.result.trim();
+    document.getElementById('fp-name').textContent = file.name;
+    document.getElementById('fp-size').textContent = (file.size / 1024).toFixed(1) + ' KB';
+    document.getElementById('file-pill').classList.add('visible');
+    document.getElementById('drop-zone').style.display = 'none';
+    document.getElementById('stat-resume').textContent = '✓';
+    document.getElementById('sn1').className = 'step-num done';
+    document.getElementById('sn1').textContent = '✓';
+    updateRunBtn();
+  };
+  reader.readAsText(file);
+}
+
+function clearFile() {
+  resumeText = '';
+  document.getElementById('file-pill').classList.remove('visible');
+  document.getElementById('drop-zone').style.display = 'block';
+  document.getElementById('file-input').value = '';
+  document.getElementById('stat-resume').textContent = '—';
+  document.getElementById('sn1').className = 'step-num';
+  document.getElementById('sn1').textContent = '1';
+  updateRunBtn();
+}
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+
+function toggleCo(el) {
+  el.classList.toggle('on');
+  updateStats();
+}
+
+function toggleAddForm() {
+  const f = document.getElementById('add-form');
+  f.classList.toggle('visible');
+  if (f.classList.contains('visible')) document.getElementById('co-input').focus();
+}
+
+function addCompany() {
+  const input = document.getElementById('co-input');
+  const name = input.value.trim();
+  if (!name) return;
+  const grid = document.getElementById('co-grid');
+  const addBtn = grid.querySelector('.co-add');
+  const colors = ['#A78BFA','#34D399','#F472B6','#60A5FA','#FBBF24'];
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  const chip = document.createElement('div');
+  chip.className = 'co-chip on';
+  chip.setAttribute('data-co', name);
+  chip.setAttribute('onclick', 'toggleCo(this)');
+  chip.innerHTML = `<div class="co-dot" style="background:${color}"></div><span>${name}</span><span class="co-check">✓</span>`;
+  grid.insertBefore(chip, addBtn);
+  input.value = '';
+  document.getElementById('add-form').classList.remove('visible');
+  updateStats();
+}
+
+function getSelectedCompanies() {
+  return [...document.querySelectorAll('.co-chip.on[data-co]')].map(c => c.getAttribute('data-co'));
+}
+
+function updateStats() {
+  document.getElementById('stat-co').textContent = getSelectedCompanies().length;
+  document.getElementById('sn2').className = getSelectedCompanies().length > 0 ? 'step-num done' : 'step-num';
+  document.getElementById('sn2').textContent = getSelectedCompanies().length > 0 ? '✓' : '2';
+  updateRunBtn();
+}
+
+function updateRunBtn() {
+  const ready = apiKey.length > 10 && resumeText.length > 50 && getSelectedCompanies().length > 0;
+  document.getElementById('run-btn').disabled = !ready;
+}
+
+const MOCK_LOG = [
+  { agent: 'profile_analyst', msg: 'Parsing resume structure and skill taxonomy...' },
+  { agent: 'profile_analyst', msg: 'Identified projects, experience, and tech stack...' },
+  { agent: 'profile_analyst', msg: 'Experience level assessed: fresher with internship' },
+  { agent: 'jd_researcher',   msg: 'Fetching entry-level role data for selected companies...' },
+  { agent: 'jd_researcher',   msg: 'Mapping required skills per company...' },
+  { agent: 'jd_researcher',   msg: 'Compiled hiring profiles for all companies' },
+  { agent: 'fit_scorer',      msg: 'Scoring candidate fit against each company...' },
+  { agent: 'fit_scorer',      msg: 'Gap analysis complete. Generating recommendations...' },
+  { agent: 'fit_scorer',      msg: 'Filtering: flagging companies above 50 threshold' },
+];
+
+function runAnalysis() {
+  const companies = getSelectedCompanies();
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.classList.add('running');
+  document.getElementById('run-icon').className = 'spin';
+  document.getElementById('run-icon').textContent = '⟳';
+  document.getElementById('run-label').textContent = 'Crew is running…';
+
+  document.getElementById('progress-section').classList.add('visible');
+  document.getElementById('results-section').classList.remove('visible');
+  document.getElementById('agent-log').innerHTML = '';
+
+  let progress = 0;
+  let logIdx = 0;
+
+  const interval = setInterval(() => {
+    progress = Math.min(progress + 8, 98);
+    document.getElementById('prog-bar').style.width = progress + '%';
+
+    if (logIdx < MOCK_LOG.length) {
+      const l = MOCK_LOG[logIdx++];
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `<span class="log-agent">[${l.agent}]</span><span class="log-msg">${l.msg}</span>`;
+      const log = document.getElementById('agent-log');
+      log.appendChild(line);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    if (progress >= 98) {
+      clearInterval(interval);
+      document.getElementById('prog-bar').style.width = '100%';
+      setTimeout(() => renderResults(companies), 400);
+    }
+  }, 220);
+
+  
+fetch('http://localhost:8000/analyze', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    api_key: apiKey,
+    resume: resumeText,
+    companies: getSelectedCompanies()
+  })
+})
+.then(r => r.json())
+.then(data => renderResults(data.scores, data.full_report))
+.catch(err => {
+  document.getElementById('run-label').textContent = 'Error — try again';
+  document.getElementById('run-btn').disabled = false;
+  console.error(err);
+});
+}
+
+function renderResults(companies) {
+  const scores = companies.map(co => ({
+    co,
+    score: Math.round(52 + Math.random() * 43),
+    strengths: ['Full-stack project depth', 'Deployed projects with real users', 'ML + web combination'],
+    gaps: ['No TypeScript experience shown', 'Domain knowledge gaps'],
+  })).sort((a, b) => b.score - a.score);
+
+  const applyCount = scores.filter(s => s.score >= 75).length;
+  const avg = Math.round(scores.reduce((a, s) => a + s.score, 0) / scores.length);
+
+  document.getElementById('sum-total').textContent = scores.length;
+  document.getElementById('sum-apply').textContent = applyCount;
+  document.getElementById('sum-avg').textContent = avg;
+
+  const container = document.getElementById('result-cards');
+  container.innerHTML = '';
+
+  scores.forEach((s, i) => {
+    const rec = s.score >= 75 ? 'apply' : s.score >= 55 ? 'upskill' : 'skip';
+    const recLabel = rec === 'apply' ? '✓ Apply' : rec === 'upskill' ? '⚡ Upskill then Apply' : '✕ Skip';
+    const color = rec === 'apply' ? 'var(--green)' : rec === 'upskill' ? 'var(--amber)' : 'var(--red)';
+
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.style.animationDelay = (i * 0.08) + 's';
+    card.innerHTML = `
+      <div class="result-top">
+        <span class="result-co">${s.co}</span>
+        <div class="result-score-wrap">
+          <span class="result-score" style="color:${color}">${s.score}</span>
+          <span class="result-score-of">/100</span>
+        </div>
+      </div>
+      <div class="score-track">
+        <div class="score-fill" style="width:0%;background:${color}" data-width="${s.score}"></div>
+      </div>
+      <div class="pills-row">
+        ${s.strengths.slice(0, 2).map(str => `<span class="pill pill-ok">↑ ${str}</span>`).join('')}
+        ${s.gaps.slice(0, 1).map(g => `<span class="pill pill-gap">↓ ${g}</span>`).join('')}
+      </div>
+      <span class="rec-badge rec-${rec}">${recLabel}</span>`;
+    container.appendChild(card);
+  });
+
+  setTimeout(() => {
+    document.querySelectorAll('.score-fill').forEach(el => {
+      el.style.width = el.getAttribute('data-width') + '%';
+    });
+  }, 100);
+
+  lastReport = scores.map(s =>
+    `${s.co}\nScore: ${s.score}/100\nStrengths: ${s.strengths.join(', ')}\nGaps: ${s.gaps.join(', ')}\n`
+  ).join('\n---\n');
+
+  document.getElementById('results-section').classList.add('visible');
+  document.getElementById('run-btn').classList.remove('running');
+  document.getElementById('run-btn').disabled = false;
+  document.getElementById('run-icon').className = '';
+  document.getElementById('run-icon').textContent = '↺';
+  document.getElementById('run-label').textContent = 'Re-run Analysis';
+}
+
+function downloadReport() {
+  const blob = new Blob([lastReport], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'job_fit_report.txt';
+  a.click();
+}
+</script>
+</body>
+</html>
